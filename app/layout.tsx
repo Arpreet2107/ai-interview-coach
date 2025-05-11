@@ -1,4 +1,4 @@
-import { Toaster } from "sonn1er";
+import { Toaster } from "sonner";
 import type { Metadata } from "next";
 import { Mona_Sans } from "next/font/google";
 
