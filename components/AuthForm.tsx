@@ -5,20 +5,47 @@ import Link from "next/link";
 import Image from "next/image";
 import { toast } from "sonner";
 import { auth } from "@/firebase/client";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-} from "firebase/auth";
-
 import { Form } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 
-import { signIn, signUp } from "@/lib/actions/auth.action";
 import FormField from "./FormField";
+
+// Placeholder for your actual signIn and signUp actions (in "@/lib/actions/auth.action")
+const mockSignIn = async ({ email, idToken }: { email: string; idToken: string }) => {
+  console.log("Mock signIn action called with:", { email, idToken });
+  //  Simulate server delay
+  await new Promise((resolve) => setTimeout(resolve, 500));
+
+  //  IMPORTANT:  This is where you would:
+  //  1.  Verify the idToken (using your server-side logic or a library)
+  //  2.  Create a session (e.g., in a database, Redis)
+  //  3.  Set a session cookie (using a library like 'cookies')
+
+  //  For demonstration purposes, let's assume success:
+  console.log("Mock signIn:  Simulating successful sign-in and session creation.");
+  return { success: true };
+  //  Or, if there's an error:
+  //  return { success: false, message: "Invalid credentials" };
+};
+
+const mockSignUp = async ({ uid, name, email, password }: { uid: string; name: string; email: string; password: string }) => {
+  console.log("Mock signUp action called with:", { uid, name, email, password });
+  // Simulate server delay
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  //  IMPORTANT:  This is where you would:
+  //  1.  Create a user in your database (if you're managing user data)
+  //  2.  Create a session for the new user
+  //  3.  Set a session cookie
+
+  //  For demonstration:
+  console.log("Mock signUp:  Simulating successful sign-up and session creation");
+  return { success: true, message: "User registered successfully" };
+};
 
 const authFormSchema = (type: FormType) => {
   return z.object({
@@ -28,9 +55,10 @@ const authFormSchema = (type: FormType) => {
   });
 };
 
+type FormType = "sign-in" | "sign-up";
+
 const AuthForm = ({ type }: { type: FormType }) => {
   const router = useRouter();
-
   const formSchema = authFormSchema(type);
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -43,6 +71,8 @@ const AuthForm = ({ type }: { type: FormType }) => {
 
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
     try {
+      console.log(`onSubmit (${type}):`, data); // Add this log
+
       if (type === "sign-up") {
         const { name, email, password } = data;
 
@@ -51,13 +81,15 @@ const AuthForm = ({ type }: { type: FormType }) => {
           email,
           password
         );
+        console.log("Firebase createUserWithEmailAndPassword:", userCredential); // Add this log
 
-        const result = await signUp({
+        const result = await mockSignUp({ // Changed to mockSignUp
           uid: userCredential.user.uid,
           name: name!,
           email,
           password,
         });
+        console.log("mockSignUp result:", result); // Add this log
 
         if (!result.success) {
           toast.error(result.message);
@@ -74,24 +106,35 @@ const AuthForm = ({ type }: { type: FormType }) => {
           email,
           password
         );
+        console.log("Firebase signInWithEmailAndPassword:", userCredential); // Add this log
 
         const idToken = await userCredential.user.getIdToken();
+        console.log("Firebase ID Token:", idToken); // Add this log
         if (!idToken) {
           toast.error("Sign in Failed. Please try again.");
           return;
         }
 
-        await signIn({
+        const result = await mockSignIn({ // Changed to mockSignIn
           email,
           idToken,
         });
+        console.log("mockSignIn result:", result);  // Add this log
 
+        if (!result.success) {
+          toast.error("Sign in failed");
+          return;
+        }
         toast.success("Signed in successfully.");
         router.push("/");
       }
-    } catch (error) {
-      console.log(error);
-      toast.error(`There was an error: ${error}`);
+    } catch (error: unknown) {
+      console.error("onSubmit error:", error); // Use console.error for errors
+      if (error instanceof Error) {
+        toast.error(`There was an error: ${error.message}`);
+      } else {
+        toast.error("An unknown error occurred.");
+      }
     }
   };
 
